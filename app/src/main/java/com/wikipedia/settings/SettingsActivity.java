@@ -1,0 +1,34 @@
+package com.wikipedia.settings;
+
+import android.content.Context;
+import android.content.Intent;
+
+import com.wikipedia.Constants;
+import com.wikipedia.activity.SingleFragmentActivity;
+
+import androidx.annotation.NonNull;
+
+import com.wikipedia.activity.SingleFragmentActivity;
+
+import static com.wikipedia.Constants.ACTIVITY_REQUEST_ADD_A_LANGUAGE;
+
+public class SettingsActivity extends SingleFragmentActivity<SettingsFragment> {
+    public static final int ACTIVITY_RESULT_LANGUAGE_CHANGED = 1;
+
+    public static Intent newIntent(@NonNull Context ctx) {
+        return new Intent(ctx, SettingsActivity.class);
+    }
+
+    @Override
+    public SettingsFragment createFragment() {
+        return SettingsFragment.newInstance();
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == Constants.ACTIVITY_REQUEST_ADD_A_LANGUAGE) {
+            setResult(ACTIVITY_RESULT_LANGUAGE_CHANGED);
+        }
+    }
+}

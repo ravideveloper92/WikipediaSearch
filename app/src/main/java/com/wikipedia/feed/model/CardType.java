@@ -1,0 +1,179 @@
+package com.wikipedia.feed.model;
+
+import android.content.Context;
+
+import com.wikipedia.feed.accessibility.AccessibilityCardView;
+import com.wikipedia.feed.announcement.AnnouncementCardView;
+import com.wikipedia.feed.becauseyouread.BecauseYouReadCardView;
+import com.wikipedia.feed.dayheader.DayHeaderCardView;
+import com.wikipedia.feed.featured.FeaturedArticleCardView;
+import com.wikipedia.feed.mostread.MostReadCardView;
+import com.wikipedia.feed.offline.OfflineCardView;
+import com.wikipedia.feed.onthisday.OnThisDayCardView;
+import com.wikipedia.feed.progress.ProgressCardView;
+import com.wikipedia.feed.random.RandomCardView;
+import com.wikipedia.feed.searchbar.SearchCardView;
+import com.wikipedia.feed.suggestededits.SuggestedEditsCardView;
+
+import androidx.annotation.NonNull;
+
+import com.wikipedia.feed.FeedContentType;
+import com.wikipedia.feed.accessibility.AccessibilityCardView;
+import com.wikipedia.feed.announcement.AnnouncementCardView;
+import com.wikipedia.feed.becauseyouread.BecauseYouReadCardView;
+import com.wikipedia.feed.dayheader.DayHeaderCardView;
+import com.wikipedia.feed.featured.FeaturedArticleCardView;
+import com.wikipedia.feed.image.FeaturedImageCardView;
+import com.wikipedia.feed.mostread.MostReadCardView;
+import com.wikipedia.feed.news.NewsListCardView;
+import com.wikipedia.feed.offline.OfflineCardView;
+import com.wikipedia.feed.onthisday.OnThisDayCardView;
+import com.wikipedia.feed.progress.ProgressCardView;
+import com.wikipedia.feed.random.RandomCardView;
+import com.wikipedia.feed.searchbar.SearchCardView;
+import com.wikipedia.feed.suggestededits.SuggestedEditsCardView;
+import com.wikipedia.feed.view.FeedCardView;
+import com.wikipedia.model.EnumCode;
+import com.wikipedia.model.EnumCodeMap;
+
+public enum CardType implements EnumCode {
+    SEARCH_BAR(0) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new SearchCardView(ctx);
+        }
+    },
+    BECAUSE_YOU_READ_LIST(2, FeedContentType.BECAUSE_YOU_READ) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new BecauseYouReadCardView(ctx);
+        }
+    },
+    MOST_READ_LIST(3, FeedContentType.TRENDING_ARTICLES) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new MostReadCardView(ctx);
+        }
+    },
+    FEATURED_ARTICLE(4, FeedContentType.FEATURED_ARTICLE) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new FeaturedArticleCardView(ctx);
+        }
+    },
+    RANDOM(5, FeedContentType.RANDOM) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new RandomCardView(ctx);
+        }
+    },
+    //
+    // "6" used to be MAIN_PAGE.
+    //
+    NEWS_LIST(7, FeedContentType.NEWS) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new NewsListCardView(ctx);
+        }
+    },
+    FEATURED_IMAGE(8, FeedContentType.FEATURED_IMAGE) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new FeaturedImageCardView(ctx);
+        }
+    },
+    BECAUSE_YOU_READ_ITEM(9),
+    MOST_READ_ITEM(10),
+    NEWS_ITEM(11),
+    NEWS_ITEM_LINK(12),
+    ANNOUNCEMENT(13) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new AnnouncementCardView(ctx);
+        }
+    },
+    SURVEY(14) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new AnnouncementCardView(ctx);
+        }
+    },
+    FUNDRAISING(15) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new AnnouncementCardView(ctx);
+        }
+    },
+    //OFFLINE_COMPILATION(16)
+    ONBOARDING_OFFLINE(17) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new AnnouncementCardView(ctx);
+        }
+    },
+    ON_THIS_DAY(18, FeedContentType.ON_THIS_DAY) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new OnThisDayCardView(ctx);
+        }
+    },
+    ONBOARDING_CUSTOMIZE_FEED(19) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new AnnouncementCardView(ctx);
+        }
+    },
+    ONBOARDING_READING_LIST_SYNC(20) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new AnnouncementCardView(ctx);
+        }
+    },
+    SUGGESTED_EDITS(21, FeedContentType.SUGGESTED_EDITS) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new SuggestedEditsCardView(ctx);
+        }
+    },
+    ACCESSIBILITY(22, FeedContentType.ACCESSIBILITY) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new AccessibilityCardView(ctx);
+        }
+    },
+    // TODO: refactor this item when the new Modern Event Platform is finished.
+    ARTICLE_ANNOUNCEMENT(96) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            // This is not actually used, since this type of card will not be shown in the feed.
+            return new AnnouncementCardView(ctx);
+        }
+    },
+    DAY_HEADER(97) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new DayHeaderCardView(ctx);
+        }
+    },
+    OFFLINE(98) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new OfflineCardView(ctx);
+        }
+    },
+    PROGRESS(99) {
+        @NonNull @Override public FeedCardView<?> newView(@NonNull Context ctx) {
+            return new ProgressCardView(ctx);
+        }
+    };
+
+    private static final EnumCodeMap<CardType> MAP = new EnumCodeMap<>(CardType.class);
+    private final int code;
+    private FeedContentType contentType;
+
+    @NonNull public static CardType of(int code) {
+        return MAP.get(code);
+    }
+
+    @NonNull public FeedCardView<?> newView(@NonNull Context ctx) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override public int code() {
+        return code;
+    }
+
+    public FeedContentType contentType() {
+        return contentType;
+    }
+
+    CardType(int code) {
+        this(code, null);
+    }
+
+    CardType(int code, FeedContentType contentType) {
+        this.code = code;
+        this.contentType = contentType;
+    }
+}

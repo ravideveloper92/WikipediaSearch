@@ -1,0 +1,155 @@
+package com.wikipedia.feed.view;
+
+import android.content.Context;
+import android.os.Build;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+import androidx.appcompat.content.res.AppCompatResources;
+import androidx.constraintlayout.widget.ConstraintLayout;
+
+import com.facebook.drawee.view.SimpleDraweeView;
+import com.wikipedia.feed.model.Card;
+import com.wikipedia.page.PageAvailableOfflineHandler;
+import com.wikipedia.util.StringUtil;
+
+import com.wikipedia.R;
+import com.wikipedia.feed.model.Card;
+import com.wikipedia.history.HistoryEntry;
+import com.wikipedia.page.PageAvailableOfflineHandler;
+import com.wikipedia.readinglist.ReadingListBookmarkMenu;
+import com.wikipedia.readinglist.database.ReadingListPage;
+import com.wikipedia.util.DimenUtil;
+import com.wikipedia.util.ResourceUtil;
+import com.wikipedia.util.StringUtil;
+import com.wikipedia.views.GoneIfEmptyTextView;
+import com.wikipedia.views.ViewUtil;
+
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
+import butterknife.OnLongClick;
+
+public class ListCardItemView extends ConstraintLayout {
+
+    public interface Callback {
+        void onSelectPage(@NonNull Card card, @NonNull HistoryEntry entry);
+        void onAddPageToList(@NonNull HistoryEntry entry);
+        void onRemovePageFromList(@NonNull HistoryEntry entry);
+        void onSharePage(@NonNull HistoryEntry entry);
+    }
+
+    @BindView(R.id.view_list_card_item_image) SimpleDraweeView imageView;
+    @BindView(R.id.view_list_card_item_title) TextView titleView;
+    @BindView(R.id.view_list_card_item_subtitle) GoneIfEmptyTextView subtitleView;
+
+    @Nullable private Card card;
+    @Nullable private Callback callback;
+    @Nullable private HistoryEntry entry;
+
+    public ListCardItemView(Context context) {
+        super(context);
+        inflate(getContext(), R.layout.view_list_card_item, this);
+        ButterKnife.bind(this);
+
+        setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        final int topBottomPadding = 16;
+        setPadding(0, DimenUtil.roundedDpToPx(topBottomPadding), 0, DimenUtil.roundedDpToPx(topBottomPadding));
+        setBackgroundColor(ResourceUtil.getThemedColor(getContext(), R.attr.paper_color));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            setForeground(AppCompatResources.getDrawable(getContext(), ResourceUtil.getThemedAttributeId(getContext(), R.attr.selectableItemBackground)));
+        }
+    }
+
+    @NonNull public ListCardItemView setCard(@Nullable Card card) {
+        this.card = card;
+        return this;
+    }
+
+    @NonNull public ListCardItemView setCallback(@Nullable Callback callback) {
+        this.callback = callback;
+        return this;
+    }
+
+    @NonNull public ListCardItemView setHistoryEntry(@NonNull HistoryEntry entry) {
+        this.entry = entry;
+        setTitle(StringUtil.fromHtml(entry.getTitle().getDisplayText()));
+        setSubtitle(entry.getTitle().getDescription());
+        setImage(entry.getTitle().getThumbUrl());
+        PageAvailableOfflineHandler.INSTANCE.check(entry.getTitle(), available -> setViewsGreyedOut(!available));
+        return this;
+    }
+
+    @OnClick void onClick(View view) {
+        if (callback != null && entry != null && card != null) {
+            callback.onSelectPage(card, entry);
+        }
+    }
+
+    @OnLongClick boolean onLongClick(View view) {
+        new ReadingListBookmarkMenu(view, true, new ReadingListBookmarkMenu.Callback() {
+            @Override
+            public void onAddRequest(@Nullable ReadingListPage page) {
+                if (getCallback() != null && entry != null) {
+                    getCallback().onAddPageToList(entry);
+                }
+            }
+
+            @Override
+            public void onDeleted(@Nullable ReadingListPage page) {
+                if (getCallback() != null && entry != null) {
+                    getCallback().onRemovePageFromList(entry);
+                }
+            }
+
+            @Override
+            public void onShare() {
+                if (getCallback() != null && entry != null) {
+                    getCallback().onSharePage(entry);
+                }
+            }
+        }).show(entry.getTitle());
+        return false;
+    }
+
+    @VisibleForTesting @Nullable Callback getCallback() {
+        return callback;
+    }
+
+    @VisibleForTesting @Nullable HistoryEntry getHistoryEntry() {
+        return entry;
+    }
+
+    @VisibleForTesting void setImage(@Nullable String url) {
+        if (url == null) {
+            imageView.setVisibility(GONE);
+        } else {
+            imageView.setVisibility(VISIBLE);
+            ViewUtil.loadImageUrlInto(imageView, url);
+        }
+    }
+
+    @VisibleForTesting void setTitle(@Nullable CharSequence text) {
+        titleView.setText(text);
+    }
+
+    @VisibleForTesting void setSubtitle(@Nullable CharSequence text) {
+        subtitleView.setText(text);
+    }
+
+    @SuppressWarnings("checkstyle:magicnumber")
+    private void setViewsGreyedOut(boolean greyedOut) {
+        // Cannot use isAttachedToWindow() because the first two item will be reset when the setHistoryEntry() getting called even they are not visible.
+        if (titleView == null || subtitleView == null || imageView == null) {
+            return;
+        }
+        final float alpha = greyedOut ? 0.5f : 1.0f;
+        titleView.setAlpha(alpha);
+        subtitleView.setAlpha(alpha);
+        imageView.setAlpha(alpha);
+    }
+}

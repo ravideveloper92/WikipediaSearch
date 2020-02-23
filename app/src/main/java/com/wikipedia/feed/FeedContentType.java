@@ -1,0 +1,258 @@
+package com.wikipedia.feed;
+
+import com.wikipedia.feed.accessibility.AccessibilityCardClient;
+import com.wikipedia.feed.aggregated.AggregatedFeedContentClient;
+import com.wikipedia.feed.becauseyouread.BecauseYouReadClient;
+import com.wikipedia.feed.dataclient.FeedClient;
+import com.wikipedia.feed.random.RandomClient;
+import com.wikipedia.feed.suggestededits.SuggestedEditsFeedClient;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
+
+import com.wikipedia.R;
+import com.wikipedia.WikipediaApp;
+import com.wikipedia.auth.AccountUtil;
+import com.wikipedia.descriptions.DescriptionEditActivity.Action;
+import com.wikipedia.feed.accessibility.AccessibilityCardClient;
+import com.wikipedia.feed.aggregated.AggregatedFeedContentClient;
+import com.wikipedia.feed.becauseyouread.BecauseYouReadClient;
+import com.wikipedia.feed.dataclient.FeedClient;
+import com.wikipedia.feed.random.RandomClient;
+import com.wikipedia.feed.suggestededits.SuggestedEditsFeedClient;
+import com.wikipedia.model.EnumCode;
+import com.wikipedia.model.EnumCodeMap;
+import com.wikipedia.settings.Prefs;
+import com.wikipedia.util.DeviceUtil;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static com.wikipedia.descriptions.DescriptionEditActivity.Action.ADD_CAPTION;
+import static com.wikipedia.descriptions.DescriptionEditActivity.Action.ADD_DESCRIPTION;
+import static com.wikipedia.descriptions.DescriptionEditActivity.Action.TRANSLATE_CAPTION;
+import static com.wikipedia.descriptions.DescriptionEditActivity.Action.TRANSLATE_DESCRIPTION;
+
+public enum FeedContentType implements EnumCode {
+    NEWS(0, R.string.view_card_news_title, R.string.feed_item_type_news, true) {
+        @Nullable
+        @Override
+        public FeedClient newClient(AggregatedFeedContentClient aggregatedClient, int age) {
+            return isEnabled() && age == 0 ? new AggregatedFeedContentClient.InTheNews(aggregatedClient) : null;
+        }
+    },
+    ON_THIS_DAY(1, R.string.on_this_day_card_title, R.string.feed_item_type_on_this_day, true) {
+        @Nullable
+        @Override
+        public FeedClient newClient(AggregatedFeedContentClient aggregatedClient, int age) {
+            return isEnabled() ? new AggregatedFeedContentClient.OnThisDayFeed(aggregatedClient) : null;
+        }
+    },
+    TRENDING_ARTICLES(3, R.string.most_read_list_card_title, R.string.feed_item_type_trending, true) {
+        @Nullable
+        @Override
+        public FeedClient newClient(AggregatedFeedContentClient aggregatedClient, int age) {
+            return isEnabled() ? new AggregatedFeedContentClient.TrendingArticles(aggregatedClient) : null;
+        }
+    },
+    //
+    // "4" used to be MAIN_PAGE.
+    //
+    RANDOM(5, R.string.view_random_card_title, R.string.feed_item_type_randomizer, false) {
+        @Nullable
+        @Override
+        public FeedClient newClient(AggregatedFeedContentClient aggregatedClient, int age) {
+            return isEnabled() && age % 2 == 0 ? new RandomClient() : null;
+        }
+    },
+    FEATURED_ARTICLE(6, R.string.view_featured_article_card_title, R.string.feed_item_type_featured_article, true) {
+        @Nullable
+        @Override
+        public FeedClient newClient(AggregatedFeedContentClient aggregatedClient, int age) {
+            return isEnabled() ? new AggregatedFeedContentClient.FeaturedArticle(aggregatedClient) : null;
+        }
+    },
+    FEATURED_IMAGE(7, R.string.view_featured_image_card_title, R.string.feed_item_type_featured_image, false) {
+        @Nullable
+        @Override
+        public FeedClient newClient(AggregatedFeedContentClient aggregatedClient, int age) {
+            return isEnabled() ? new AggregatedFeedContentClient.FeaturedImage(aggregatedClient) : null;
+        }
+    },
+    BECAUSE_YOU_READ(8, R.string.view_because_you_read_card_title, R.string.feed_item_type_because_you_read, false) {
+        @Nullable
+        @Override
+        public FeedClient newClient(AggregatedFeedContentClient aggregatedClient, int age) {
+            return isEnabled() ? new BecauseYouReadClient() : null;
+        }
+    },
+    SUGGESTED_EDITS(9, R.string.suggested_edits_feed_card_title, R.string.feed_item_type_suggested_edits, false) {
+        @Nullable
+        @Override
+        public FeedClient newClient(AggregatedFeedContentClient aggregatedClient, int age) {
+            if (isEnabled() && AccountUtil.isLoggedIn() && WikipediaApp.getInstance().isOnline()) {
+                List<Action> unlockedTypes = getUnlockedEditingPrivileges();
+                if (unlockedTypes.size() > 0) {
+                    return new SuggestedEditsFeedClient(unlockedTypes.get(age % unlockedTypes.size()));
+                }
+            }
+            return null;
+        }
+    },
+    ACCESSIBILITY(10, 0, 0, false, false) {
+        @Nullable
+        @Override
+        public FeedClient newClient(AggregatedFeedContentClient aggregatedClient, int age) {
+            return DeviceUtil.isAccessibilityEnabled() ? new AccessibilityCardClient() : null;
+        }
+    };
+
+    List<Action> getUnlockedEditingPrivileges() {
+        List<Action> unlockedTypes = new ArrayList<>();
+        unlockedTypes.add(ADD_DESCRIPTION);
+        unlockedTypes.add(TRANSLATE_DESCRIPTION);
+        unlockedTypes.add(ADD_CAPTION);
+        unlockedTypes.add(TRANSLATE_CAPTION);
+        return unlockedTypes;
+    }
+
+    private static final EnumCodeMap<FeedContentType> MAP
+            = new EnumCodeMap<>(FeedContentType.class);
+    private final int code;
+    @StringRes private final int titleId;
+    @StringRes private final int subtitleId;
+    private int order;
+    private boolean enabled = true;
+
+    private boolean perLanguage;
+    private boolean showInConfig = true;
+    private List<String> langCodesSupported = new ArrayList<>();
+    private List<String> langCodesDisabled = new ArrayList<>();
+
+    @NonNull public static FeedContentType of(int code) {
+        return MAP.get(code);
+    }
+
+    @Nullable
+    public abstract FeedClient newClient(AggregatedFeedContentClient aggregatedClient,
+                                         int age);
+
+    @Override public int code() {
+        return code;
+    }
+
+    @StringRes public int titleId() {
+        return titleId;
+    }
+
+    @StringRes public int subtitleId() {
+        return subtitleId;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public boolean showInConfig() {
+        return showInConfig;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public Integer getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
+    }
+
+    public boolean isPerLanguage() {
+        return perLanguage;
+    }
+
+    public List<String> getLangCodesSupported() {
+        return langCodesSupported;
+    }
+
+    public List<String> getLangCodesDisabled() {
+        return langCodesDisabled;
+    }
+
+    FeedContentType(int code, @StringRes int titleId, @StringRes int subtitleId, boolean perLanguage) {
+        this.code = code;
+        this.order = code;
+        this.titleId = titleId;
+        this.subtitleId = subtitleId;
+        this.perLanguage = perLanguage;
+    }
+
+    FeedContentType(int code, @StringRes int titleId, @StringRes int subtitleId, boolean perLanguage, boolean showInConfig) {
+        this(code, titleId, subtitleId, perLanguage);
+        this.showInConfig = showInConfig;
+    }
+
+    public static List<String> getAggregatedLanguages() {
+        List<String> appLangCodes = WikipediaApp.getInstance().language().getAppLanguageCodes();
+        List<String> list = new ArrayList<>();
+        for (int i = 0; i < FeedContentType.values().length; i++) {
+            FeedContentType type = FeedContentType.values()[i];
+            if (!type.isEnabled()) {
+                continue;
+            }
+            for (String appLangCode : appLangCodes) {
+                if ((type.getLangCodesSupported().isEmpty() || type.getLangCodesSupported().contains(appLangCode))
+                        && !type.getLangCodesDisabled().contains(appLangCode)
+                        && !list.contains(appLangCode)) {
+                    list.add(appLangCode);
+                }
+            }
+        }
+        return list;
+    }
+
+    public static void saveState() {
+        List<Boolean> enabledList = new ArrayList<>();
+        List<Integer> orderList = new ArrayList<>();
+        Map<Integer, List<String>> langSupportedMap = new HashMap<>();
+        Map<Integer, List<String>> langDisabledMap = new HashMap<>();
+
+        for (int i = 0; i < FeedContentType.values().length; i++) {
+            FeedContentType type = FeedContentType.values()[i];
+            enabledList.add(type.isEnabled());
+            orderList.add(type.getOrder());
+
+            langSupportedMap.put(type.code, type.langCodesSupported);
+            langDisabledMap.put(type.code, type.langCodesDisabled);
+        }
+        Prefs.setFeedCardsEnabled(enabledList);
+        Prefs.setFeedCardsOrder(orderList);
+        Prefs.setFeedCardsLangSupported(langSupportedMap);
+        Prefs.setFeedCardsLangDisabled(langDisabledMap);
+    }
+
+    public static void restoreState() {
+        List<Boolean> enabledList = Prefs.getFeedCardsEnabled();
+        List<Integer> orderList = Prefs.getFeedCardsOrder();
+        Map<Integer, List<String>> langSupportedMap = Prefs.getFeedCardsLangSupported();
+        Map<Integer, List<String>> langDisabledMap = Prefs.getFeedCardsLangDisabled();
+        for (int i = 0; i < FeedContentType.values().length; i++) {
+            FeedContentType type = FeedContentType.values()[i];
+            type.setEnabled(i < enabledList.size() ? enabledList.get(i) : true);
+            type.setOrder(i < orderList.size() ? orderList.get(i) : i);
+            type.langCodesSupported.clear();
+            if (langSupportedMap.containsKey(type.code)) {
+                type.langCodesSupported.addAll(langSupportedMap.get(type.code));
+            }
+            type.langCodesDisabled.clear();
+            if (langDisabledMap.containsKey(type.code)) {
+                type.langCodesDisabled.addAll(langDisabledMap.get(type.code));
+            }
+        }
+    }
+}
